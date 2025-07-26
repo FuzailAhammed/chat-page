@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { Document, Page, pdfjs } from 'react-pdf';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
 
 interface PDFViewerProps {
   file: File | null;
@@ -12,28 +16,20 @@ interface PDFViewerProps {
 export function PDFViewer({ file, currentPage = 1, onPageChange }: PDFViewerProps) {
   const [totalPages, setTotalPages] = useState(1);
   const [zoom, setZoom] = useState(100);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setPdfUrl(url);
-      
-      // For demo purposes, simulate page count (replace with actual PDF parsing)
-      setTotalPages(5);
-      
-      return () => {
-        URL.revokeObjectURL(url);
-      };
-    }
-  }, [file]);
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setTotalPages(numPages);
+    setIsLoading(false);
+    setError(null);
+  };
 
-  useEffect(() => {
-    if (currentPage && currentPage !== 1) {
-      // Simulate navigation to specific page
-      console.log(`Navigating to page ${currentPage}`);
-    }
-  }, [currentPage]);
+  const onDocumentLoadError = (error: Error) => {
+    setError('Failed to load PDF document');
+    setIsLoading(false);
+    console.error('PDF load error:', error);
+  };
 
   const handlePreviousPage = () => {
     if (currentPage > 1) {
@@ -150,16 +146,39 @@ export function PDFViewer({ file, currentPage = 1, onPageChange }: PDFViewerProp
               transformOrigin: 'top center'
             }}
           >
-            {pdfUrl ? (
-              <iframe
-                src={`${pdfUrl}#page=${currentPage}`}
-                className="w-[210mm] h-[297mm] border-0"
-                title="PDF Viewer"
-              />
-            ) : (
-              <div className="w-[210mm] h-[297mm] flex items-center justify-center bg-gray-100">
+            {isLoading && (
+              <div className="w-[595px] h-[842px] flex items-center justify-center bg-gray-100">
                 <p className="text-gray-500">Loading PDF...</p>
               </div>
+            )}
+            
+            {error && (
+              <div className="w-[595px] h-[842px] flex items-center justify-center bg-gray-100">
+                <p className="text-red-500">{error}</p>
+              </div>
+            )}
+            
+            {file && !error && (
+              <Document
+                file={file}
+                onLoadSuccess={onDocumentLoadSuccess}
+                onLoadError={onDocumentLoadError}
+                loading={
+                  <div className="w-[595px] h-[842px] flex items-center justify-center bg-gray-100">
+                    <p className="text-gray-500">Loading PDF...</p>
+                  </div>
+                }
+              >
+                <Page
+                  pageNumber={currentPage}
+                  scale={zoom / 100}
+                  loading={
+                    <div className="w-[595px] h-[842px] flex items-center justify-center bg-gray-100">
+                      <p className="text-gray-500">Loading page...</p>
+                    </div>
+                  }
+                />
+              </Document>
             )}
           </div>
         </div>

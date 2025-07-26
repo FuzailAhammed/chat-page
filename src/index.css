@@ -1,3 +1,4 @@
+@import "./components/ui/pdf-styles.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
