@@ -4,8 +4,16 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Document, Page, pdfjs } from 'react-pdf';
 
-// Configure PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Configure PDF.js worker with fallback
+try {
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.js',
+    import.meta.url,
+  ).toString();
+} catch (error) {
+  console.warn('Failed to load local PDF worker, falling back to CDN:', error);
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+}
 
 interface PDFViewerProps {
   file: File | null;
@@ -19,6 +27,11 @@ export function PDFViewer({ file, currentPage = 1, onPageChange }: PDFViewerProp
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Validate PDF file
+  const isValidPDF = (file: File) => {
+    return file && file.type === 'application/pdf' && file.size > 0;
+  };
+
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setTotalPages(numPages);
     setIsLoading(false);
@@ -26,9 +39,15 @@ export function PDFViewer({ file, currentPage = 1, onPageChange }: PDFViewerProp
   };
 
   const onDocumentLoadError = (error: Error) => {
-    setError('Failed to load PDF document');
+    console.error('PDF load error details:', {
+      error: error.message,
+      stack: error.stack,
+      worker: pdfjs.GlobalWorkerOptions.workerSrc,
+      fileType: file?.type,
+      fileSize: file?.size
+    });
+    setError(`Failed to load PDF: ${error.message}`);
     setIsLoading(false);
-    console.error('PDF load error:', error);
   };
 
   const handlePreviousPage = () => {
@@ -68,6 +87,14 @@ export function PDFViewer({ file, currentPage = 1, onPageChange }: PDFViewerProp
     return (
       <div className="flex items-center justify-center h-full bg-muted/20">
         <p className="text-muted-foreground">No PDF loaded</p>
+      </div>
+    );
+  }
+
+  if (!isValidPDF(file)) {
+    return (
+      <div className="flex items-center justify-center h-full bg-muted/20">
+        <p className="text-destructive">Invalid PDF file. Please upload a valid PDF document.</p>
       </div>
     );
   }
