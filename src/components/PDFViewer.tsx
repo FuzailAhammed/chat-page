@@ -4,8 +4,37 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Document, Page, pdfjs } from 'react-pdf';
 
-// Configure PDF.js worker - use CDN for reliability
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Configure PDF.js worker with multiple fallback strategies
+const configurePDFWorker = () => {
+  console.log('Configuring PDF.js worker, version:', pdfjs.version);
+  
+  // Strategy 1: Try bundled worker from node_modules
+  try {
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.min.js',
+      import.meta.url,
+    ).toString();
+    console.log('Using bundled PDF worker:', pdfjs.GlobalWorkerOptions.workerSrc);
+    return;
+  } catch (error) {
+    console.warn('Failed to load bundled PDF worker:', error);
+  }
+  
+  // Strategy 2: Try jsdelivr CDN
+  try {
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+    console.log('Using jsdelivr CDN PDF worker:', pdfjs.GlobalWorkerOptions.workerSrc);
+    return;
+  } catch (error) {
+    console.warn('Failed to configure jsdelivr CDN worker:', error);
+  }
+  
+  // Strategy 3: Fallback to unpkg CDN
+  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+  console.log('Using unpkg CDN PDF worker (fallback):', pdfjs.GlobalWorkerOptions.workerSrc);
+};
+
+configurePDFWorker();
 
 interface PDFViewerProps {
   file: File | null;
