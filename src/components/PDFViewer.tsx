@@ -4,10 +4,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Document, Page, pdfjs } from 'react-pdf';
 
-// Configure PDF.js worker - use static file from public folder
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
-console.log('PDF.js worker configured to use static file:', pdfjs.GlobalWorkerOptions.workerSrc);
-
 interface PDFViewerProps {
   file: File | null;
   currentPage?: number;
@@ -19,6 +15,13 @@ export function PDFViewer({ file, currentPage = 1, onPageChange }: PDFViewerProp
   const [zoom, setZoom] = useState(100);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Configure PDF.js worker dynamically
+  useEffect(() => {
+    if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+      pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+    }
+  }, []);
 
   // Validate PDF file
   const isValidPDF = (file: File) => {

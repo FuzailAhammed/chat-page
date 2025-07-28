@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   optimizeDeps: {
-    include: ['pdfjs-dist']
+    exclude: ['pdfjs-dist']
   },
   assetsInclude: ['**/*.pdf'],
 }));
